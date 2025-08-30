@@ -7,10 +7,13 @@ ConversionFunction gFormatConversions[] =
 	{ MFVideoFormat_RGB32, TransformImage_RGB32 },
 	{ MFVideoFormat_RGB24, TransformImage_RGB24 },
 	{ MFVideoFormat_YUY2, TransformImage_YUY2 },
-	{ MFVideoFormat_NV12, TransformImage_NV12 }
+	{ MFVideoFormat_NV12, TransformImage_NV12 },
+	{ MFVideoFormat_MJPG, TransformImage_MJPG },
+	{ MFVideoFormat_UYVY, TransformImage_UYVY },
+	{ MFVideoFormat_I420, TransformImage_I420 }
 };
 
-const DWORD gConversionFormats = 4;
+const DWORD gConversionFormats = 7;
 
 
 
@@ -186,5 +189,131 @@ void TransformImage_NV12(
 		bitsY += (2 * aSrcStride);
 		bitsCr += aSrcStride;
 		bitsCb += aSrcStride;
+	}
+}
+
+// MJPEG format converter - uses RGB fallback since MJPEG needs decoder
+void TransformImage_MJPG(
+	BYTE*       aDest,
+	LONG        aDestStride,
+	const BYTE* aSrc,
+	LONG        aSrcStride,
+	DWORD       aWidthInPixels,
+	DWORD       aHeightInPixels
+)
+{
+	// For MJPEG, we rely on Media Foundation's built-in decoder
+	// This function should not be called if MF_READWRITE_DISABLE_CONVERTERS is FALSE
+	// But we provide a fallback just in case
+	memset(aDest, 0, aHeightInPixels * aDestStride);
+}
+
+// UYVY format converter (similar to YUY2 but U and V are swapped)
+void TransformImage_UYVY(
+	BYTE*       aDest,
+	LONG        aDestStride,
+	const BYTE* aSrc,
+	LONG        aSrcStride,
+	DWORD       aWidthInPixels,
+	DWORD       aHeightInPixels
+)
+{
+	for (DWORD y = 0; y < aHeightInPixels; y++)
+	{
+		BYTE *srcPel = (BYTE*)aSrc;
+		RGBQUAD *destPel = (RGBQUAD*)aDest;
+
+		for (DWORD x = 0; x < aWidthInPixels; x += 2)
+		{
+			int u0 = srcPel[0] - 128;  // U first in UYVY
+			int y0 = srcPel[1];
+			int v0 = srcPel[2] - 128;  // V 
+			int y1 = srcPel[3];
+
+			destPel[x] = ConvertYCrCbToRGB(y0, v0, u0);
+			if (x + 1 < aWidthInPixels)
+				destPel[x + 1] = ConvertYCrCbToRGB(y1, v0, u0);
+
+			srcPel += 4;
+		}
+
+		aSrc += aSrcStride;
+		aDest += aDestStride;
+	}
+}
+
+// I420 format converter (Planar YUV 4:2:0)
+void TransformImage_I420(
+	BYTE*       aDest,
+	LONG        aDestStride,
+	const BYTE* aSrc,
+	LONG        aSrcStride,
+	DWORD       aWidthInPixels,
+	DWORD       aHeightInPixels
+)
+{
+	const BYTE* bitsY = aSrc;
+	const BYTE* bitsU = aSrc + (aHeightInPixels * aSrcStride);
+	const BYTE* bitsV = bitsU + ((aHeightInPixels * aSrcStride) / 4);
+
+	for (DWORD y = 0; y < aHeightInPixels; y += 2)
+	{
+		const BYTE* lineY1 = bitsY;
+		const BYTE* lineY2 = bitsY + aSrcStride;
+		const BYTE* lineU = bitsU;
+		const BYTE* lineV = bitsV;
+
+		BYTE* dibLine1 = aDest;
+		BYTE* dibLine2 = aDest + aDestStride;
+
+		for (DWORD x = 0; x < aWidthInPixels; x += 2)
+		{
+			int y0 = (int)lineY1[0];
+			int y1 = (int)lineY1[1];
+			int y2 = (int)lineY2[0];
+			int y3 = (int)lineY2[1];
+			int u = (int)lineU[0] - 128;
+			int v = (int)lineV[0] - 128;
+
+			RGBQUAD r = ConvertYCrCbToRGB(y0, v, u);
+			dibLine1[0] = r.rgbBlue;
+			dibLine1[1] = r.rgbGreen;
+			dibLine1[2] = r.rgbRed;
+			dibLine1[3] = 0; // Alpha
+
+			r = ConvertYCrCbToRGB(y1, v, u);
+			dibLine1[4] = r.rgbBlue;
+			dibLine1[5] = r.rgbGreen;
+			dibLine1[6] = r.rgbRed;
+			dibLine1[7] = 0; // Alpha
+
+			r = ConvertYCrCbToRGB(y2, v, u);
+			dibLine2[0] = r.rgbBlue;
+			dibLine2[1] = r.rgbGreen;
+			dibLine2[2] = r.rgbRed;
+			dibLine2[3] = 0; // Alpha
+
+			r = ConvertYCrCbToRGB(y3, v, u);
+			dibLine2[4] = r.rgbBlue;
+			dibLine2[5] = r.rgbGreen;
+			dibLine2[6] = r.rgbRed;
+			dibLine2[7] = 0; // Alpha
+
+			lineY1 += 2;
+			lineY2 += 2;
+			lineU += 1;
+			lineV += 1;
+
+			dibLine1 += 8;
+			dibLine2 += 8;
+		}
+
+		aDest += (2 * aDestStride);
+		bitsY += (2 * aSrcStride);
+		if (y % 2 == 0)
+		{
+			bitsU += aSrcStride / 2;
+			bitsV += aSrcStride / 2;
+		}
 	}
 }

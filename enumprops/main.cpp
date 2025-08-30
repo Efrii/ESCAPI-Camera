@@ -43,7 +43,9 @@ void main()
 
 		if (initCapture(i, &capture) == 0)
 		{
-			printf("\tCan't open device\n");
+			int errorCode = getCaptureErrorCode(i);
+			int errorLine = getCaptureErrorLine(i);
+			printf("\tCan't open device (Error: 0x%08X, Line: %d)\n", errorCode, errorLine);
 		}
 		else
 		{

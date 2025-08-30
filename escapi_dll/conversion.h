@@ -50,5 +50,33 @@ void TransformImage_NV12(
 	DWORD		aWidthInPixels,
 	DWORD		aHeightInPixels
 	);
+
+void TransformImage_MJPG(
+	BYTE*		aDest,
+	LONG		aDestStride,
+	const BYTE* aSrc,
+	LONG		aSrcStride,
+	DWORD		aWidthInPixels,
+	DWORD		aHeightInPixels
+	);
+
+void TransformImage_UYVY(
+	BYTE*		aDest,
+	LONG		aDestStride,
+	const BYTE* aSrc,
+	LONG		aSrcStride,
+	DWORD		aWidthInPixels,
+	DWORD		aHeightInPixels
+	);
+
+void TransformImage_I420(
+	BYTE*		aDest,
+	LONG		aDestStride,
+	const BYTE* aSrc,
+	LONG		aSrcStride,
+	DWORD		aWidthInPixels,
+	DWORD		aHeightInPixels
+	);
+
 extern ConversionFunction gFormatConversions[];
 extern const DWORD gConversionFormats;

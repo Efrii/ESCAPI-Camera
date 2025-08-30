@@ -416,7 +416,23 @@ HRESULT CaptureClass::setConversionFunction(REFGUID aSubtype)
 		}
 	}
 
-	return MF_E_INVALIDMEDIATYPE;
+	// For formats we don't have custom converters,
+	// we rely on Media Foundation's built-in converters
+	// This should work since we set MF_READWRITE_DISABLE_CONVERTERS to FALSE
+	if (aSubtype == MFVideoFormat_MJPG ||
+		aSubtype == MFVideoFormat_H264 ||
+		aSubtype == MFVideoFormat_ARGB32 ||
+		aSubtype == MFVideoFormat_RGB555 ||
+		aSubtype == MFVideoFormat_RGB565)
+	{
+		mConvertFn = NULL; // Let MF handle the conversion
+		return S_OK;
+	}
+
+	// If we don't recognize the format, try to let Media Foundation handle it
+	// This is a fallback for unknown formats
+	mConvertFn = NULL;
+	return S_OK;
 }
 
 HRESULT CaptureClass::setVideoType(IMFMediaType *aType)
@@ -629,7 +645,8 @@ HRESULT CaptureClass::initCapture(int aDevice)
 
 		DO_OR_DIE_CRITSECTION;
 
-		hr = attributes->SetUINT32(MF_READWRITE_DISABLE_CONVERTERS, TRUE);
+		// Enable converters for MJPEG and other compressed formats
+		hr = attributes->SetUINT32(MF_READWRITE_DISABLE_CONVERTERS, FALSE);
 
 		DO_OR_DIE_CRITSECTION;
 

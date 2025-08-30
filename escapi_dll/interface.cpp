@@ -17,6 +17,10 @@ CaptureClass *gDevice[MAXDEVICES] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 int gDoCapture[MAXDEVICES];
 int gOptions[MAXDEVICES];
 
+// Storage for error codes when device objects are deleted
+int gLastErrorCode[MAXDEVICES] = { 0 };
+int gLastErrorLine[MAXDEVICES] = { 0 };
+
 
 void CleanupDevice(int aDevice)
 {
@@ -37,8 +41,18 @@ HRESULT InitDevice(int aDevice)
 	HRESULT hr = gDevice[aDevice]->initCapture(aDevice);
 	if (FAILED(hr))
 	{
+		// Store error info before deleting the object
+		gLastErrorCode[aDevice] = gDevice[aDevice]->mErrorCode;
+		gLastErrorLine[aDevice] = gDevice[aDevice]->mErrorLine;
+		
 		delete gDevice[aDevice];
 		gDevice[aDevice] = 0;
+	}
+	else
+	{
+		// Clear previous errors on success
+		gLastErrorCode[aDevice] = 0;
+		gLastErrorLine[aDevice] = 0;
 	}
 	return hr;
 }
@@ -157,14 +171,14 @@ void CheckForFail(int aDevice)
 int GetErrorCode(int aDevice)
 {
 	if (!gDevice[aDevice])
-		return 0;
+		return gLastErrorCode[aDevice];
 	return gDevice[aDevice]->mErrorCode;
 }
 
 int GetErrorLine(int aDevice)
 {
 	if (!gDevice[aDevice])
-		return 0;
+		return gLastErrorLine[aDevice];
 	return gDevice[aDevice]->mErrorLine;
 }
 
