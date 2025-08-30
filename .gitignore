@@ -1,0 +1,35 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.VC.opendb
+*.ipch/
+
+# Build outputs
+[Bb]in/
+[Oo]bj/
+Debug/
+Release/
+x64/
+x86/
+build/
+out/
+*.pdb
+*.ilk
+*.obj
+*.log
+
+# VS Code
+.vscode/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# CMake / others (kalau ada)
+CMakeFiles/
+CMakeCache.txt
+cmake-build-*/
